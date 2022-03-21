@@ -1,10 +1,8 @@
-#include <linux/fs.h>
-#include <linux/fdtable.h>
-#include <linux/sched.h>
-#include <linux/path.h>
-#include <linux/mount.h>
-#include <uapi/linux/fcntl.h>
-#include <asm/current.h>
+/*
+ * Date: 2022-03-21 23:14:45
+ * Author: hdzhang<hdzhang920@163.com>
+ * Description: 
+*/
 
 #include "get_dentry.h"
 
@@ -55,7 +53,7 @@ int dump_dentry(struct super_block *sb) {
                 }
         }
 
-        printk("DCACHE_REFERENCED:%lu\n", dentry_count);
+        printk("dentry_count:%lu\n", dentry_count);
         return 0;
         
 }

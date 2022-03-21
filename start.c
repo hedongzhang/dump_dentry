@@ -1,6 +1,12 @@
+/*
+ * Date: 2022-03-21 23:11:38
+ * Author: hdzhang<hdzhang920@163.com>
+ * Description: 
+*/
+
 #include <linux/module.h>
-#include <linux/kernel.h>    //包含了常用的内核函数
-#include <linux/init.h>      //包含了宏__init和宏__exit
+#include <linux/kernel.h>
+#include <linux/init.h>
 
 #include "get_dentry.h"
 
