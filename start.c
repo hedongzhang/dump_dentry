@@ -2,9 +2,11 @@
 #include <linux/kernel.h>    //包含了常用的内核函数
 #include <linux/init.h>      //包含了宏__init和宏__exit
 
+#include "get_dentry.h"
 
 static int __init kdemo_init(void) {
     printk(">>> demo driver begin!\n");
+    get_superblock("/");
     return 0;
 }
 

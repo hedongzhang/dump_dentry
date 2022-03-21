@@ -6,7 +6,7 @@ KERNELDIR = /usr/src/kernels/`uname -r`
 # KBUILD_EXTRA_SYMBOLS += other module symbols file     eg:/root/driver_demo/Module.symvers
 # export KBUILD_EXTRA_SYMBOLS
 
-OBJECTS += start.o
+OBJECTS += start.o get_dentry.o
 
 obj-m := $(MOD).o
 $(MOD)-y := $(OBJECTS)
