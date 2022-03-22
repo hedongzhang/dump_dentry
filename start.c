@@ -12,7 +12,7 @@
 
 static int __init kdemo_init(void) {
     printk(">>> demo driver begin!\n");
-    dump("/");
+    dump_dentry(get_superblock("/"));
     return 0;
 }
 
