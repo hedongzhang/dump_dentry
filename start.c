@@ -8,11 +8,11 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 
-#include "get_dentry.h"
+#include "dump_dentry.h"
 
 static int __init kdemo_init(void) {
     printk(">>> demo driver begin!\n");
-    get_superblock("/");
+    dump("/");
     return 0;
 }
 

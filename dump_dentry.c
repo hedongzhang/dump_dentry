@@ -4,23 +4,25 @@
  * Description: 
 */
 
-#include "get_dentry.h"
+#include "dump_dentry.h"
 
-int get_superblock(const char *filename) {
+#define OUT_FILE "/tmp/output"
+
+struct super_block *get_superblock(const char *filename) {
+        
         struct file *file = filp_open(filename, O_RDONLY, 0);
         struct path *path = &file->f_path;
         struct super_block *sb = path->mnt->mnt_sb;
-        printk("open file:%s\n", path->dentry->d_iname);
-        
-        dump_dentry(sb);
 
+        printk("open file:%s\n", path->dentry->d_iname);
         filp_close(file, current->files);
-        return 0;
+
+        return sb;
 }
 
-int dump_dentry(struct super_block *sb) {
+int dump_dentry(struct super_block *sb, char *buf, size_t len) {
         struct dentry *dentry;
-        unsigned long dentry_count = 0;
+        size_t dentry_count = 0;
 
         if (!list_empty(&sb->s_dentry_lru)) {
                 list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru) {
@@ -53,7 +55,36 @@ int dump_dentry(struct super_block *sb) {
                 }
         }
 
-        printk("dentry_count:%lu\n", dentry_count);
+        sprintf(buf, "dentry_count:%lu\n", dentry_count);
+
         return 0;
-        
+}
+
+void output(char *buf, int len) {
+        struct file *f;
+        mm_segment_t fs;
+        loff_t pos = 0;
+
+        f = filp_open(OUT_FILE, O_RDWR | O_CREAT, 0644);
+        if (IS_ERR(f)) {
+                printk("create outout file error\n");
+                return;
+        }
+        fs = get_fs();
+        set_fs(KERNEL_DS);
+
+        vfs_write(f, buf, len, &pos);
+        filp_close(f, NULL);
+        set_fs(fs);
+}
+
+int dump(const char *filename) {
+        struct super_block *sb;
+        char buf[64] = "";
+        size_t len = 64;
+
+        sb = get_superblock(filename);
+        dump_dentry(sb, buf, len);
+        output(buf, len);
+        return 0;
 }
