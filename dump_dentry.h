@@ -15,6 +15,7 @@
 #include <uapi/linux/fcntl.h>
 #include <asm/current.h>
 #include <linux/uaccess.h>
+#include <linux/slab.h>
 
 struct super_block *get_superblock(const char *filename);
 

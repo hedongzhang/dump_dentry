@@ -22,23 +22,27 @@ struct super_block *get_superblock(const char *filename) {
 
 int dump_dentry(struct super_block *sb) {
         struct dentry *dentry;
-        char buf[OUTPUT_BUFFER_LEN] = "";
         size_t dump_len = 0;
         size_t dentry_count = 0;
+        char *buf;
+
+        buf = (char *)kmalloc(OUTPUT_BUFFER_LEN, GFP_KERNEL);
+        memset(buf, 0, OUTPUT_BUFFER_LEN);
 
         list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru)
         {
                 // buf_len = snprintf(buf, FILENAME_LEN, "%s\n", dentry->d_name.name);
-                dump_len = dump_dentry_path(dentry, buf, OUTPUT_BUFFER_LEN-1);
+                dump_len = dump_dentry_path(dentry, buf, OUTPUT_BUFFER_LEN);
                 output(buf, dump_len);
 
                 dentry_count++;
                 memset(buf, 0, OUTPUT_BUFFER_LEN);
         }
 
-        dump_len = sprintf(buf, "dump %lu dentry\n", dentry_count);
+        dump_len = snprintf(buf, OUTPUT_BUFFER_LEN, "dump %lu dentry\n", dentry_count);
         output(buf, dump_len);
 
+        kfree(buf);
         printk("dump %lu dentry\n", dentry_count);
         return 0;
 }
@@ -72,15 +76,15 @@ void output(char *buf, int len) {
         f = filp_open(OUT_FILE, O_CREAT | O_RDWR | O_APPEND, 0644);
         if (IS_ERR(f))
         {
-                printk("create outout file error\n");
+                printk("create or open dump file error\n");
                 return;
         }
+
         fs = get_fs();
         set_fs(KERNEL_DS);
-
-        // pos = f->f_pos;
         ret = vfs_write(f, buf, len, &pos);
-        // f->f_pos = pos;
         filp_close(f, NULL);
         set_fs(fs);
+
+        return;
 }
