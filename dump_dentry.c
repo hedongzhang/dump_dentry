@@ -6,8 +6,7 @@
 
 #include "dump_dentry.h"
 
-#define OUT_FILE "/tmp/output"
-#define FILENAME_LEN 1024
+#define OUT_FILE "/tmp/dump_dentry"
 #define OUTPUT_BUFFER_LEN 4096
 
 struct super_block *get_superblock(const char *filename) {
@@ -24,45 +23,44 @@ struct super_block *get_superblock(const char *filename) {
 int dump_dentry(struct super_block *sb) {
         struct dentry *dentry;
         char buf[OUTPUT_BUFFER_LEN] = "";
-        size_t buf_len = 0;
+        size_t dump_len = 0;
         size_t dentry_count = 0;
 
-        if (!list_empty(&sb->s_dentry_lru)) {
-                list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru) {
-                        buf_len = snprintf(buf, FILENAME_LEN, "%s\n", dentry->d_name.name);
-                        // buf_len = dentry_path_ext(dentry, buf, FILENAME_LEN);
+        list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru)
+        {
+                // buf_len = snprintf(buf, FILENAME_LEN, "%s\n", dentry->d_name.name);
+                dump_len = dump_dentry_path(dentry, buf, OUTPUT_BUFFER_LEN-1);
+                output(buf, dump_len);
 
-                        output(buf, buf_len);
-
-                        dentry_count++;
-                        memset(buf, 0, OUTPUT_BUFFER_LEN);
-                }
+                dentry_count++;
+                memset(buf, 0, OUTPUT_BUFFER_LEN);
         }
 
-        buf_len = sprintf(buf, "dentry_count:%lu\n", dentry_count);
-        output(buf, buf_len);
+        dump_len = sprintf(buf, "dump %lu dentry\n", dentry_count);
+        output(buf, dump_len);
 
         printk("dump %lu dentry\n", dentry_count);
         return 0;
 }
 
-char *dentry_path_ext(struct dentry *dentry, char *buf, int buflen)
-{
-// 	char *p = NULL;
-// 	char *retval;
+size_t dump_dentry_path(struct dentry *dentry, char *buf, int len) {
+        size_t free_len = len - 1;
+        size_t dentry_len = 0;
 
-// 	if (d_unlinked(dentry)) {
-// 		p = buf + buflen;
-// 		if (prepend(&p, &buflen, "//deleted", 10) != 0)
-// 			goto Elong;
-// 		buflen++;
-// 	}
-// 	retval = __dentry_path(dentry, buf, buflen);
-// 	if (!IS_ERR(retval) && p)
-// 		*p = '/';	/* restore '/' overriden with '\0' */
-// 	return retval;
-// Elong:
-// 	return ERR_PTR(-ENAMETOOLONG);
+        while (free_len)
+        {
+                dentry_len = snprintf(buf, free_len, "%s/", dentry->d_iname);
+                // dentry_len = snprintf(buf, dentry->d_name.len+1, "%s/", dentry->d_name.name);
+                if (dentry == dentry->d_parent)
+                        break;
+
+                buf += dentry_len;
+                free_len -= dentry_len;
+                dentry = dentry->d_parent;
+        }
+        
+        sprintf(buf, "\n");
+        return len - free_len;
 }
 
 void output(char *buf, int len) {
@@ -71,15 +69,9 @@ void output(char *buf, int len) {
         mm_segment_t fs;
         loff_t pos;
 
-        // f = filp_open(OUT_FILE, O_RDWR | O_CREAT | O_APPEND, 0644);
-        // sb = file->f_path.mnt->mnt_sb;
-        
-        // f->f_op->write(f, buf, offset, &fp->f_pos);
-
-        // filp_close(f, current->files);
-
-        f = filp_open(OUT_FILE, O_RDWR | O_CREAT | O_APPEND, 0644);
-        if (IS_ERR(f)) {
+        f = filp_open(OUT_FILE, O_CREAT | O_RDWR | O_APPEND, 0644);
+        if (IS_ERR(f))
+        {
                 printk("create outout file error\n");
                 return;
         }

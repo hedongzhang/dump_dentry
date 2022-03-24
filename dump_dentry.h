@@ -20,7 +20,7 @@ struct super_block *get_superblock(const char *filename);
 
 int dump_dentry(struct super_block *sb);
 
-char *dentry_path_ext(struct dentry *dentry, char *buf, int buflen);
+size_t dump_dentry_path(struct dentry *dentry, char *buf, int buflen);
 
 void output(char *buf, int len);
 
