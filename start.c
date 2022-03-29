@@ -10,9 +10,11 @@
 
 #include "dump_dentry.h"
 
+#define DUMP_DIRECTORY "/"
+
 static int __init kdemo_init(void) {
     printk(">>> demo driver begin!\n");
-    dump_dentry(get_superblock("/"));
+    dump_dentry(DUMP_DIRECTORY);
     return 0;
 }
 

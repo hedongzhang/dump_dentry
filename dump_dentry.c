@@ -6,7 +6,7 @@
 
 #include "dump_dentry.h"
 
-#define OUT_FILE "/tmp/dump_dentry"
+#define OUT_FILE "/tmp/dump_dentry.out"
 #define OUTPUT_BUFFER_LEN 4096
 
 struct super_block *get_superblock(const char *filename) {
@@ -16,35 +16,7 @@ struct super_block *get_superblock(const char *filename) {
         file = filp_open(filename, O_RDONLY, 0);
         sb = file->f_path.mnt->mnt_sb;
         filp_close(file, current->files);
-        printk("get \"%s\" superblock\n", file->f_path.dentry->d_iname);
         return sb;
-}
-
-int dump_dentry(struct super_block *sb) {
-        struct dentry *dentry;
-        size_t dump_len = 0;
-        size_t dentry_count = 0;
-        char *buf;
-
-        buf = (char *)kmalloc(OUTPUT_BUFFER_LEN, GFP_KERNEL);
-        memset(buf, 0, OUTPUT_BUFFER_LEN);
-
-        list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru)
-        {
-                // buf_len = snprintf(buf, FILENAME_LEN, "%s\n", dentry->d_name.name);
-                dump_len = dump_dentry_path(dentry, buf, OUTPUT_BUFFER_LEN);
-                output(buf, dump_len);
-
-                dentry_count++;
-                memset(buf, 0, OUTPUT_BUFFER_LEN);
-        }
-
-        dump_len = snprintf(buf, OUTPUT_BUFFER_LEN, "dump %lu dentry\n", dentry_count);
-        output(buf, dump_len);
-
-        kfree(buf);
-        printk("dump %lu dentry\n", dentry_count);
-        return 0;
 }
 
 size_t dump_dentry_path(struct dentry *dentry, char *buf, int len) {
@@ -67,13 +39,16 @@ size_t dump_dentry_path(struct dentry *dentry, char *buf, int len) {
         return len - free_len;
 }
 
-void output(char *buf, int len) {
+void output(char *buf, int len, int new) {
         ssize_t ret;
         struct file *f;
         mm_segment_t fs;
-        loff_t pos;
+        loff_t pos = 0;
 
-        f = filp_open(OUT_FILE, O_CREAT | O_RDWR | O_APPEND, 0644);
+        if (new)
+                f = filp_open(OUT_FILE, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+        else
+                f = filp_open(OUT_FILE, O_WRONLY | O_APPEND, 0644);
         if (IS_ERR(f))
         {
                 printk("create or open dump file error\n");
@@ -87,4 +62,35 @@ void output(char *buf, int len) {
         set_fs(fs);
 
         return;
+}
+
+int dump_dentry(const char *filename) {
+        struct dentry *dentry;
+        size_t dump_len = 0;
+        size_t dentry_count = 0;
+        char *buf;
+
+        struct super_block *sb = get_superblock(filename);
+
+        buf = (char *)kzalloc(OUTPUT_BUFFER_LEN, GFP_KERNEL);
+
+        dump_len = snprintf(buf, OUTPUT_BUFFER_LEN, ">>> start dump \"%s\" dentry\n", filename);
+        output(buf, dump_len, 1);
+        memset(buf, 0, OUTPUT_BUFFER_LEN);
+
+        list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru)
+        {
+                // buf_len = snprintf(buf, FILENAME_LEN, "%s\n", dentry->d_name.name);
+                dump_len = dump_dentry_path(dentry, buf, OUTPUT_BUFFER_LEN);
+                output(buf, dump_len, 0);
+
+                dentry_count++;
+                memset(buf, 0, OUTPUT_BUFFER_LEN);
+        }
+
+        dump_len = snprintf(buf, OUTPUT_BUFFER_LEN, "<<< end dump \"%s\" dentry: %lu\n", filename, dentry_count);
+        output(buf, dump_len, 0);
+
+        kfree(buf);
+        return 0;
 }
