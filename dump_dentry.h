@@ -17,6 +17,10 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 
+struct dentry_counter {
+        
+}
+
 struct super_block *get_superblock(const char *filename);
 
 size_t dump_dentry_path(struct dentry *dentry, char *buf, int buflen);

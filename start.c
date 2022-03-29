@@ -12,13 +12,15 @@
 
 #define DUMP_DIRECTORY "/"
 
-static int __init kdemo_init(void) {
+static int __init kdemo_init(void)
+{
     printk(">>> demo driver begin!\n");
     dump_dentry(DUMP_DIRECTORY);
     return 0;
 }
 
-static void __exit kdemo_exit(void) {
+static void __exit kdemo_exit(void)
+{
     printk(">>> demo driver exit!\n");
 }
 
