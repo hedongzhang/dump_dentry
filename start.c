@@ -9,18 +9,22 @@
 #include <linux/init.h>
 
 #include "dump_dentry.h"
+#include "rb_dentry.h"
 
 #define DUMP_DIRECTORY "/"
 
 static int __init kdemo_init(void)
 {
     printk(">>> demo driver begin!\n");
-    dump_dentry(DUMP_DIRECTORY);
+    rb_init_dentry();
+    // dump_dentry(DUMP_DIRECTORY);
+    analyze_dentry(DUMP_DIRECTORY);
     return 0;
 }
 
 static void __exit kdemo_exit(void)
 {
+    rb_free_dentry();
     printk(">>> demo driver exit!\n");
 }
 

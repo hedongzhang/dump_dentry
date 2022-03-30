@@ -7,7 +7,7 @@
 #include "rb_dentry.h"
 #include "output.h"
 
-struct rb_root rb_dentry_root = RB_ROOT;
+static struct rb_root rb_dentry_root = RB_ROOT;
 
 /*
  * Desc: 计算hash，碰撞概率较大，后续优化
@@ -34,18 +34,23 @@ struct dentry_counter* alloc_counter(const char *name)
         RB_CLEAR_NODE(&counter->node);
         strncpy(counter->name, name, COUNTER_NAME_LEN-1);
         counter->hash = get_hash(name);
-        counter->count = 0;
+        counter->count = 1;
         
         return counter;
 }
 
-void free_counter_root(void)
+int rb_init_dentry(void)
+{
+        return 0;
+}
+
+int rb_free_dentry(void)
 {
         struct dentry_counter *curr;
         struct rb_node *rb_curr_counter, *rb_next_countr;
 
         if(RB_EMPTY_ROOT(&rb_dentry_root))
-                return;
+                return 0;
 
         rb_curr_counter = rb_first(&rb_dentry_root);
         rb_next_countr = rb_next(rb_curr_counter);
@@ -59,6 +64,8 @@ void free_counter_root(void)
                 rb_curr_counter = rb_next_countr;
                 rb_next_countr = rb_next(rb_curr_counter);
         }
+
+        return 0;
 }
 
 /*
@@ -137,7 +144,7 @@ void rb_foreach_dentry(void *callback(struct rb_node*))
  * Args: 
  * Ret: 
 */
-void dump_and_free_rb(void)
+void rb_dump_dentry(void)
 {
         char *buff;
         size_t dump_len = 0;
@@ -157,8 +164,6 @@ void dump_and_free_rb(void)
         }
 
         kfree(buff);
-        free_counter_root();
-        
         return;
 }
 

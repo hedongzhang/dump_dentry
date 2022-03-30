@@ -21,55 +21,44 @@ struct super_block *get_superblock(const char *filename)
 
 size_t dump_dentry_path(struct dentry *dentry, char *buff, int len)
 {
-        size_t free_len = len - 1;
+        size_t free_len = len-1;
         size_t dentry_len = 0;
-        struct dentry *child_dentry = NULL;
 
-        while (free_len) {
+        //导出所有dentry
+        while (dentry != dentry->d_parent && free_len > 0) {
                 dentry_len = snprintf(buff, free_len, "%s/", dentry->d_iname);
-                // dentry_len = snprintf(buff, dentry->d_name.len+1, "%s/", dentry->d_name.name);
-                if (dentry == dentry->d_parent)
-                        break;
-
                 buff += dentry_len;
+
                 free_len -= dentry_len;
-                child_dentry = dentry;
                 dentry = dentry->d_parent;
         }
 
-        //将路径中最上层目录名插入rbtree
-        rb_insert_dentry(child_dentry->d_iname);
-        
         sprintf(buff, "\n");
         return len - free_len;
 }
 
 int dump_dentry(const char *filename)
 {
-        struct dentry *dentry;
+        char *buff;
         size_t dump_len = 0;
         size_t dentry_count = 0;
-        char *buff;
-
+        struct dentry *dentry;
+        
         struct super_block *sb = get_superblock(filename);
 
         buff = (char *)kzalloc(OUTPUT_BUFFER_LEN, GFP_KERNEL);
 
         dump_len = snprintf(buff, OUTPUT_BUFFER_LEN, ">>> start dump \"%s\" dentry\n", filename);
         output(buff, dump_len, 1);
-        memset(buff, 0, OUTPUT_BUFFER_LEN);
+        memset(buff, 0, dump_len);
 
         list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru) {
-                // buf_len = snprintf(buff, FILENAME_LEN, "%s\n", dentry->d_name.name);
                 dump_len = dump_dentry_path(dentry, buff, OUTPUT_BUFFER_LEN);
                 output(buff, dump_len, 0);
 
                 dentry_count++;
                 memset(buff, 0, dump_len);
         }
-
-        //导出dentry计数信息
-        dump_and_free_rb();
 
         dump_len = snprintf(buff, OUTPUT_BUFFER_LEN, "<<< end dump \"%s\" dentry: %lu\n", filename, dentry_count);
         output(buff, dump_len, 0);
@@ -78,6 +67,39 @@ int dump_dentry(const char *filename)
         return 0;
 }
 
+int analyze_dentry(const char *filename)
+{
+        char *buff;
+        size_t dump_len = 0;
+        size_t dentry_count = 0;
+        struct dentry *dentry, *curr_dentry, *child_dentry;
 
+        struct super_block *sb = get_superblock(filename);
+        
+        buff = (char *)kzalloc(OUTPUT_BUFFER_LEN, GFP_KERNEL);
+        dump_len = snprintf(buff, OUTPUT_BUFFER_LEN, ">>> start analyze \"%s\" dentry\n", filename);
+        output(buff, dump_len, 1);
+
+        list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru) {
+                curr_dentry = dentry;
+                while (curr_dentry != curr_dentry->d_parent) {
+                        child_dentry = curr_dentry;
+                        curr_dentry = child_dentry->d_parent;
+                }
+                //将路径中第一层目录名插入rbtree
+                rb_insert_dentry(child_dentry->d_iname);
+
+                dentry_count++;
+        }
+
+        //导出计数信息
+        rb_dump_dentry();
+
+        dump_len = snprintf(buff, OUTPUT_BUFFER_LEN, "<<< end analyze \"%s\" dentry: %lu\n", filename, dentry_count);
+        output(buff, dump_len, 0);
+
+        kfree(buff);
+        return 0;
+}
 
 

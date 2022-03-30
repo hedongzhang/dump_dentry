@@ -23,5 +23,7 @@ size_t dump_dentry_path(struct dentry *dentry, char *buff, int buflen);
 
 int dump_dentry(const char *filename);
 
+int analyze_dentry(const char *filename);
+
 #endif
 

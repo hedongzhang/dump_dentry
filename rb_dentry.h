@@ -20,13 +20,13 @@ struct dentry_counter {
         size_t count;
 };
 
-extern struct rb_root rb_dentry_root; 
-
 int get_hash(const char *name);
 
 struct dentry_counter* alloc_counter(const char *name);
 
-void free_counter_root(void);
+int rb_init_dentry(void);
+
+int rb_free_dentry(void);
 
 struct dentry_counter *rb_search_dentry(const char *name);
 
@@ -34,6 +34,6 @@ struct dentry_counter *rb_insert_dentry(const char *name);
 
 void rb_foreach_dentry(void *callback(struct rb_node*));
 
-void dump_and_free_rb(void);
+void rb_dump_dentry(void);
 
 #endif
