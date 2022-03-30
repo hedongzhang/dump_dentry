@@ -10,7 +10,6 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 
-
 #define OUTPUT_FILE "/tmp/dump_dentry.out"
 #define OUTPUT_BUFFER_LEN PAGE_SIZE
 

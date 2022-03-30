@@ -26,17 +26,155 @@ int get_hash(const char *name)
         return hash;
 }
 
-struct dentry_counter* alloc_counter(const char *name)
+struct dentry_counter* alloc_counter(struct dentry **dentries, size_t num)
 {
+        size_t i;
         struct dentry_counter *counter;
         
         counter = kzalloc(sizeof(struct dentry_counter), GFP_KERNEL);
         RB_CLEAR_NODE(&counter->node);
-        strncpy(counter->name, name, COUNTER_NAME_LEN-1);
-        counter->hash = get_hash(name);
+
+        counter->hash = 0;
         counter->count = 1;
+        counter->num = num;
+
+        for (i = 0; i < num; i++) {
+                if(dentries[i]) {
+                        counter->dentries[i] = dentries[i];
+                        counter->hash += get_hash(dentries[i]->d_iname);
+                }
+        }
         
         return counter;
+}
+
+/*
+ * Desc: 
+ * Args: 
+ * Ret: 找到则返回dentry_counter指针，否则返回NULL
+*/
+struct dentry_counter *rb_search_dentry(struct dentry **dentries, size_t num)
+{
+        size_t i;
+        int hash = 0;
+        struct rb_node *rb_curr;
+        struct dentry_counter *curr;
+
+        for(i = 0; i < num; i++) {
+                if (dentries[i])
+                        hash += get_hash(dentries[i]->d_iname);
+        }
+        
+        rb_curr = rb_dentry_root.rb_node;
+
+        while (rb_curr) {
+                curr = rb_entry(rb_curr, struct dentry_counter, node);
+
+                if(hash < curr->hash)
+                        rb_curr = rb_curr->rb_left;
+                else if(hash > curr->hash)
+                        rb_curr = rb_curr->rb_right;
+                else
+                        return curr;
+        }
+
+        return NULL;
+}
+
+struct dentry_counter *rb_insert_dentry(struct dentry **dentries, size_t num)
+{
+        size_t i;
+        int hash = 0;
+        struct rb_node *rb_curr, **rb_curr_p;
+        struct dentry_counter *curr, *new;
+
+        for(i = 0; i < num; i++) {
+                if (dentries[i])
+                        hash += get_hash(dentries[i]->d_iname);
+        }
+        
+        rb_curr_p = &rb_dentry_root.rb_node;
+        rb_curr = *rb_curr_p;
+        
+        while (*rb_curr_p) {
+                rb_curr = *rb_curr_p;
+                curr = rb_entry(rb_curr, struct dentry_counter, node);
+
+                if(hash < curr->hash)
+                        rb_curr_p = &rb_curr->rb_left;
+                else if(hash > curr->hash)
+                        rb_curr_p = &rb_curr->rb_right;
+                else {
+                        curr->count++;
+                        return curr;
+                }            
+        }
+
+        new = alloc_counter(dentries, num);
+        if (!new)
+                return NULL;
+        
+        rb_link_node(&new->node, rb_curr, rb_curr_p);
+        rb_insert_color(&new->node, &rb_dentry_root);
+        
+        return new;
+}
+
+void rb_foreach_dentry(void *callback(struct rb_node*))
+{
+        struct rb_node *rb_curr;
+        
+        for(rb_curr = rb_first(&rb_dentry_root); rb_curr; rb_curr = rb_next(rb_curr))
+                callback(rb_curr);
+}
+
+size_t rb_dump_dntry(struct dentry_counter *counter, char *buff, size_t len)
+{
+        size_t i;
+        size_t dentry_len = 0;
+        size_t buff_free = len;
+
+        for (i = 0; i < counter->num && buff_free > 64; i++)
+        {
+                if(!counter->dentries[i])
+                        continue;
+                        
+                dentry_len = snprintf(buff, buff_free, "%s/", counter->dentries[i]->d_iname);
+                buff += dentry_len;
+                buff_free -= dentry_len;
+        }
+        dentry_len = snprintf(buff, 64, " Count: %lu\n", counter->count);
+        buff_free -= dentry_len;
+
+        return len - buff_free;
+}
+
+/*
+ * Desc: 导出rbtree信息
+ * Args: 
+ * Ret: 
+*/
+void rb_dump_dentrys(void)
+{
+        char *buff;
+        size_t buff_len;
+        struct dentry_counter *curr;
+        struct rb_node *rb_curr;
+
+        buff = (char *)kzalloc(OUTPUT_BUFFER_LEN, GFP_KERNEL);
+
+        //遍历所有插入到rbtree的目录名，打印对应的dentry计数
+        for(rb_curr = rb_first(&rb_dentry_root); rb_curr; rb_curr = rb_next(rb_curr)) {
+                curr = rb_entry(rb_curr, struct dentry_counter, node);
+                
+                buff_len = rb_dump_dntry(curr, buff, OUTPUT_BUFFER_LEN);
+                
+                output(buff, buff_len, 0);
+                memset(buff, 0, buff_len);
+        }
+
+        kfree(buff);
+        return;
 }
 
 int rb_init_dentry(void)
@@ -67,111 +205,3 @@ int rb_free_dentry(void)
 
         return 0;
 }
-
-/*
- * Desc: 
- * Args: 
- * Ret: 找到则返回dentry_counter指针，否则返回NULL
-*/
-struct dentry_counter *rb_search_dentry(const char *name)
-{
-        int hash;
-        struct rb_node *rb_curr;
-        struct dentry_counter *curr;
-
-        hash = get_hash(name);
-        rb_curr = rb_dentry_root.rb_node;
-
-        while (rb_curr) {
-                curr = rb_entry(rb_curr, struct dentry_counter, node);
-
-                if(hash < curr->hash)
-                        rb_curr = rb_curr->rb_left;
-                else if(hash > curr->hash)
-                        rb_curr = rb_curr->rb_right;
-                else
-                        return curr;
-        }
-
-        return NULL;
-}
-
-struct dentry_counter *rb_insert_dentry(const char *name)
-{
-        int hash;
-        struct rb_node *rb_curr, **rb_curr_p;
-        struct dentry_counter *curr, *new;
-
-        hash = get_hash(name);
-        
-        rb_curr_p = &rb_dentry_root.rb_node;
-        rb_curr = *rb_curr_p;
-        
-        while (*rb_curr_p) {
-                rb_curr = *rb_curr_p;
-                curr = rb_entry(rb_curr, struct dentry_counter, node);
-
-                if(hash < curr->hash)
-                        rb_curr_p = &rb_curr->rb_left;
-                else if(hash > curr->hash)
-                        rb_curr_p = &rb_curr->rb_right;
-                else {
-                        curr->count++;
-                        return curr;
-                }            
-        }
-
-        new = alloc_counter(name);
-        if (!new)
-                return NULL;
-        
-        rb_link_node(&new->node, rb_curr, rb_curr_p);
-        rb_insert_color(&new->node, &rb_dentry_root);
-        
-        return new;
-}
-
-void rb_foreach_dentry(void *callback(struct rb_node*))
-{
-        struct rb_node *rb_curr;
-        
-        for(rb_curr = rb_first(&rb_dentry_root); rb_curr; rb_curr = rb_next(rb_curr))
-                callback(rb_curr);
-}
-
-/*
- * Desc: 导出rbtree信息并释放rbtree内存
- * Args: 
- * Ret: 
-*/
-void rb_dump_dentry(void)
-{
-        char *buff;
-        size_t dump_len = 0;
-        struct dentry_counter *curr;
-        struct rb_node *rb_curr;
-
-        buff = (char *)kzalloc(OUTPUT_BUFFER_LEN, GFP_KERNEL);
-
-        //遍历所有插入到rbtree的目录名，打印对应的dentry计数
-        for(rb_curr = rb_first(&rb_dentry_root); rb_curr; rb_curr = rb_next(rb_curr)) {
-                curr = rb_entry(rb_curr, struct dentry_counter, node);
-
-                dump_len = snprintf(buff, OUTPUT_BUFFER_LEN, "directory: \"%s\" count: %lu\n", curr->name, curr->count);
-                output(buff, dump_len, 0);
-
-                memset(buff, 0, dump_len);
-        }
-
-        kfree(buff);
-        return;
-}
-
-// void rb_foreach_dentry(struct rb_node *rb_curr, void *callback(struct rb_node*))
-// {
-//         if(!rb_curr) 
-//                 return;
-//         rb_foreach_dentry(rb_curr->rb_left, callback);
-//         callback(rb_curr)
-//         rb_foreach_dentry(rb_curr->rb_right, callback);
-// }

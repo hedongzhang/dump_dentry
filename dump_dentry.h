@@ -7,15 +7,10 @@
 #ifndef __DUMP_DENTRY_
 #define __DUMP_DENTRY_
 
-#include <linux/fs.h>
-#include <linux/fdtable.h>
-#include <linux/sched.h>
-#include <linux/path.h>
 #include <linux/mount.h>
-#include <uapi/linux/fcntl.h>
-#include <asm/current.h>
-#include <linux/uaccess.h>
 #include <linux/slab.h>
+
+#define DEF_DUMP_DEPTH 2
 
 struct super_block *get_superblock(const char *filename);
 

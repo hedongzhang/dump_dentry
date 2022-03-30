@@ -27,8 +27,8 @@ size_t dump_dentry_path(struct dentry *dentry, char *buff, int len)
         //导出所有dentry
         while (dentry != dentry->d_parent && free_len > 0) {
                 dentry_len = snprintf(buff, free_len, "%s/", dentry->d_iname);
-                buff += dentry_len;
 
+                buff += dentry_len;
                 free_len -= dentry_len;
                 dentry = dentry->d_parent;
         }
@@ -72,7 +72,9 @@ int analyze_dentry(const char *filename)
         char *buff;
         size_t dump_len = 0;
         size_t dentry_count = 0;
-        struct dentry *dentry, *curr_dentry, *child_dentry;
+        struct dentry *dentry, *curr_dentry;
+        struct dentry *dentries[DEF_DUMP_DEPTH] = {NULL};
+        int curr_depth, curr_count;
 
         struct super_block *sb = get_superblock(filename);
         
@@ -82,18 +84,27 @@ int analyze_dentry(const char *filename)
 
         list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru) {
                 curr_dentry = dentry;
+                curr_depth = 0;
+                curr_count = 0;
+
                 while (curr_dentry != curr_dentry->d_parent) {
-                        child_dentry = curr_dentry;
-                        curr_dentry = child_dentry->d_parent;
+                        dentries[curr_depth] = curr_dentry;
+
+                        curr_dentry = curr_dentry->d_parent;
+                        curr_depth = (curr_depth+1) % DEF_DUMP_DEPTH;
+                        curr_count++;
                 }
-                //将路径中第一层目录名插入rbtree
-                rb_insert_dentry(child_dentry->d_iname);
+                //将dentry插入rbtree
+                if(curr_count < DEF_DUMP_DEPTH)
+                        rb_insert_dentry(dentries, curr_count);
+                else
+                        rb_insert_dentry(dentries, DEF_DUMP_DEPTH);
 
                 dentry_count++;
         }
 
         //导出计数信息
-        rb_dump_dentry();
+        rb_dump_dentrys();
 
         dump_len = snprintf(buff, OUTPUT_BUFFER_LEN, "<<< end analyze \"%s\" dentry: %lu\n", filename, dentry_count);
         output(buff, dump_len, 0);
