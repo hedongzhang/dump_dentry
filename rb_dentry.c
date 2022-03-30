@@ -44,12 +44,20 @@ void free_counter_root(void)
         struct dentry_counter *curr;
         struct rb_node *rb_curr_counter, *rb_next_countr;
 
+        if(RB_EMPTY_ROOT(&rb_dentry_root))
+                return;
+
         rb_curr_counter = rb_first(&rb_dentry_root);
         rb_next_countr = rb_next(rb_curr_counter);
-        for(; rb_curr_counter; rb_next_countr = rb_next(rb_curr_counter)) {
+        for(; rb_curr_counter; ) {
                 curr = rb_entry(rb_curr_counter, struct dentry_counter, node);
+                rb_erase(rb_curr_counter, &rb_dentry_root);
                 kfree(curr);
+
+                if(!rb_next_countr)
+                        break;
                 rb_curr_counter = rb_next_countr;
+                rb_next_countr = rb_next(rb_curr_counter);
         }
 }
 
@@ -149,6 +157,8 @@ void dump_and_free_rb(void)
         }
 
         kfree(buff);
+        free_counter_root();
+        
         return;
 }
 
