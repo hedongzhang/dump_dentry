@@ -1,4 +1,4 @@
-MOD = kdemo
+MOD = ddump
 MOD_DIR = $(shell pwd)
 
 KERNELDIR = /usr/src/kernels/`uname -r`
