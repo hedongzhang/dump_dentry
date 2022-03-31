@@ -15,7 +15,7 @@
 
 static int __init kdemo_init(void)
 {
-    printk(">>> demo driver begin!\n");
+    printk(">>> ddump driver begin!\n");
     rb_init_dentry();
     // dump_dentry(DUMP_DIRECTORY);
     analyze_dentry(DUMP_DIRECTORY);
@@ -25,7 +25,7 @@ static int __init kdemo_init(void)
 static void __exit kdemo_exit(void)
 {
     rb_free_dentry();
-    printk(">>> demo driver exit!\n");
+    printk(">>> ddump driver exit!\n");
 }
 
 module_init(kdemo_init);
