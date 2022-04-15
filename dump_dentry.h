@@ -9,8 +9,11 @@
 
 #include <linux/mount.h>
 #include <linux/slab.h>
+#include <linux/string.h>
 
 #define DEF_DUMP_DEPTH 2
+#define DUMP_MATCH_MAX 200000
+#define DUMP_MATCH_KEY "tfa"
 
 struct super_block *get_superblock(const char *filename);
 

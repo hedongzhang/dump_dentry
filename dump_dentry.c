@@ -42,6 +42,7 @@ int dump_dentry(const char *filename)
         char *buff;
         size_t dump_len = 0;
         size_t dentry_count = 0;
+        size_t match_count = 0;
         struct dentry *dentry;
         
         struct super_block *sb = get_superblock(filename);
@@ -54,13 +55,21 @@ int dump_dentry(const char *filename)
 
         list_for_each_entry(dentry, &sb->s_dentry_lru, d_lru) {
                 dump_len = dump_dentry_path(dentry, buff, OUTPUT_BUFFER_LEN);
-                output(buff, dump_len, 0);
+
+                if(strnstr(buff, DUMP_MATCH_KEY, dump_len)) {
+                        match_count++;
+                        output(buff, dump_len, 0);
+                }   
 
                 dentry_count++;
                 memset(buff, 0, dump_len);
+
+                if(match_count > DUMP_MATCH_MAX)
+                        break;
         }
 
-        dump_len = snprintf(buff, OUTPUT_BUFFER_LEN, "<<< end dump \"%s\" dentry: %lu\n", filename, dentry_count);
+        dump_len = snprintf(buff, OUTPUT_BUFFER_LEN, "<<< end dump \"%s\" dentry:%lu match \"%s\":%lu\n", 
+                filename, dentry_count, DUMP_MATCH_KEY, match_count);
         output(buff, dump_len, 0);
 
         kfree(buff);
