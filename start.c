@@ -16,15 +16,15 @@
 static int __init kdemo_init(void)
 {
     printk(">>> ddump driver begin!\n");
-    // rb_init_dentry();
-    dump_dentry(DUMP_DIRECTORY);
-    // analyze_dentry(DUMP_DIRECTORY);
+    rb_init_dentry();
+    // dump_dentry(DUMP_DIRECTORY);
+    analyze_dentry(DUMP_DIRECTORY);
     return 0;
 }
 
 static void __exit kdemo_exit(void)
 {
-    // rb_free_dentry();
+    rb_free_dentry();
     printk(">>> ddump driver exit!\n");
 }
 

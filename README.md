@@ -10,7 +10,7 @@ insmod and dump
 insmod ./ddump.ko && rmmod ./ddump.ko
 ```
 
-output file is /tmp/dump_dentry.out :
+output file is /tmp/dump_dentry.out
 ```
 >>> start analyze "/" dentry
 ~/ Count: 1

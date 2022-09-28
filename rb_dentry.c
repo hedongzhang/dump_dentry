@@ -185,22 +185,22 @@ int rb_init_dentry(void)
 int rb_free_dentry(void)
 {
         struct dentry_counter *curr;
-        struct rb_node *rb_curr_counter, *rb_next_countr;
+        struct rb_node *rb_curr_counter, *rb_next_counter;
 
         if(RB_EMPTY_ROOT(&rb_dentry_root))
                 return 0;
 
         rb_curr_counter = rb_first(&rb_dentry_root);
-        rb_next_countr = rb_next(rb_curr_counter);
+        rb_next_counter = rb_next(rb_curr_counter);
         for(; rb_curr_counter; ) {
                 curr = rb_entry(rb_curr_counter, struct dentry_counter, node);
                 rb_erase(rb_curr_counter, &rb_dentry_root);
                 kfree(curr);
 
-                if(!rb_next_countr)
+                if(!rb_next_counter)
                         break;
-                rb_curr_counter = rb_next_countr;
-                rb_next_countr = rb_next(rb_curr_counter);
+                rb_curr_counter = rb_next_counter;
+                rb_next_counter = rb_next(rb_curr_counter);
         }
 
         return 0;
