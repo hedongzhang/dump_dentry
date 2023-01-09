@@ -13,6 +13,6 @@
 #define OUTPUT_FILE "/tmp/dump_dentry.out"
 #define OUTPUT_BUFFER_LEN PAGE_SIZE
 
-void output(char *buff, int len, int new);
+int output(char *buff, int len, int new);
 
 #endif

@@ -14,9 +14,9 @@ static struct rb_root rb_dentry_root = RB_ROOT;
  * Args: 
  * Ret: 
 */
-int get_hash(const char *name)
+size_t get_hash(const char *name)
 {
-        int hash = 0;
+        size_t hash = 0;
         int len = strlen(name);
 
         while (len) {
@@ -26,22 +26,63 @@ int get_hash(const char *name)
         return hash;
 }
 
-struct dentry_counter* alloc_counter(struct dentry **dentries, size_t num)
+size_t get_dentries_hash(struct dentry **dentries, size_t num, size_t depth)
 {
-        size_t i;
-        struct dentry_counter *counter;
-        
-        counter = kzalloc(sizeof(struct dentry_counter), GFP_KERNEL);
-        RB_CLEAR_NODE(&counter->node);
+        int i;
+        size_t hash_index;
+        size_t hash = 0;
 
-        counter->hash = 0;
-        counter->count = 1;
-        counter->num = num;
+        if(num > DEF_DENTRY_NUM_MAX) {
+                num = DEF_DENTRY_NUM_MAX;
+        }
+
+        if(depth > num)
+                depth = num;
+        hash_index = num - depth;
 
         for (i = 0; i < num; i++) {
                 if(dentries[i]) {
+                        if(i >= hash_index)
+                                hash += get_hash(dentries[i]->d_iname);
+                }
+        }
+
+        return hash;
+}
+
+struct dentry_counter* alloc_counter(struct dentry **dentries, size_t num, size_t depth)
+{
+        int i;
+        size_t hash_index;
+        struct dentry_counter *counter;
+
+        if(num > DEF_DENTRY_NUM_MAX) {
+                num = DEF_DENTRY_NUM_MAX;
+        }
+
+        if(depth > num)
+                depth = num;
+        hash_index = num - depth;
+        
+        counter = kzalloc(sizeof(struct dentry_counter), GFP_KERNEL);
+        if(!counter)
+                return NULL;
+
+        RB_CLEAR_NODE(&counter->node);
+
+        counter->count = 1;
+        counter->num = 0;
+
+        counter->depth = depth;
+        counter->hash = 0;
+
+        for (i = 0; i < num; i++) {
+                if(dentries[i]) {
+                        counter->num++;
                         counter->dentries[i] = dentries[i];
-                        counter->hash += get_hash(dentries[i]->d_iname);
+
+                        if(i >= hash_index)
+                                counter->hash += get_hash(dentries[i]->d_iname);
                 }
         }
         
@@ -53,20 +94,15 @@ struct dentry_counter* alloc_counter(struct dentry **dentries, size_t num)
  * Args: 
  * Ret: 找到则返回dentry_counter指针，否则返回NULL
 */
-struct dentry_counter *rb_search_dentry(struct dentry **dentries, size_t num)
+struct dentry_counter *rb_search_dentry(struct dentry **dentries, size_t num, size_t depth)
 {
-        size_t i;
-        int hash = 0;
+        size_t hash = 0;
         struct rb_node *rb_curr;
         struct dentry_counter *curr;
 
-        for(i = 0; i < num; i++) {
-                if (dentries[i])
-                        hash += get_hash(dentries[i]->d_iname);
-        }
+        hash = get_dentries_hash(dentries, num, depth);
         
         rb_curr = rb_dentry_root.rb_node;
-
         while (rb_curr) {
                 curr = rb_entry(rb_curr, struct dentry_counter, node);
 
@@ -81,17 +117,13 @@ struct dentry_counter *rb_search_dentry(struct dentry **dentries, size_t num)
         return NULL;
 }
 
-struct dentry_counter *rb_insert_dentry(struct dentry **dentries, size_t num)
+struct dentry_counter *rb_insert_dentry(struct dentry **dentries, size_t num, size_t depth)
 {
-        size_t i;
-        int hash = 0;
+        size_t hash = 0;
         struct rb_node *rb_curr, **rb_curr_p;
         struct dentry_counter *curr, *new;
 
-        for(i = 0; i < num; i++) {
-                if (dentries[i])
-                        hash += get_hash(dentries[i]->d_iname);
-        }
+        hash = get_dentries_hash(dentries, num, depth);
         
         rb_curr_p = &rb_dentry_root.rb_node;
         rb_curr = *rb_curr_p;
@@ -110,7 +142,7 @@ struct dentry_counter *rb_insert_dentry(struct dentry **dentries, size_t num)
                 }            
         }
 
-        new = alloc_counter(dentries, num);
+        new = alloc_counter(dentries, num, depth);
         if (!new)
                 return NULL;
         
@@ -130,20 +162,27 @@ void rb_foreach_dentry(void *callback(struct rb_node*))
 
 size_t rb_dump_dntry(struct dentry_counter *counter, char *buff, size_t len)
 {
-        size_t i;
+        int index, count;
         size_t dentry_len = 0;
         size_t buff_free = len;
 
-        for (i = 0; i < counter->num && buff_free > 64; i++)
-        {
-                if(!counter->dentries[i])
-                        continue;
-                        
-                dentry_len = snprintf(buff, buff_free, "%s/", counter->dentries[i]->d_iname);
+        dentry_len = snprintf(buff, 64, "COUNT:%lu      ", counter->count);
+        buff += dentry_len;
+        buff_free -= dentry_len;
+
+        index = counter->num - 1;
+        count = counter->depth;
+        while(count) {
+                dentry_len = snprintf(buff, buff_free, "/%s", counter->dentries[index]->d_iname);
                 buff += dentry_len;
                 buff_free -= dentry_len;
+
+                index--;
+                count--;
         }
-        dentry_len = snprintf(buff, 64, " Count: %lu\n", counter->count);
+
+        dentry_len = snprintf(buff, 64, "\n");
+        buff += dentry_len;
         buff_free -= dentry_len;
 
         return len - buff_free;
@@ -170,7 +209,7 @@ void rb_dump_dentrys(void)
                 buff_len = rb_dump_dntry(curr, buff, OUTPUT_BUFFER_LEN);
                 
                 output(buff, buff_len, 0);
-                memset(buff, 0, buff_len);
+                memset(buff, 0, OUTPUT_BUFFER_LEN);
         }
 
         kfree(buff);
@@ -185,22 +224,22 @@ int rb_init_dentry(void)
 int rb_free_dentry(void)
 {
         struct dentry_counter *curr;
-        struct rb_node *rb_curr_counter, *rb_next_counter;
+        struct rb_node *rb_curr_p, *rb_next_p;
 
         if(RB_EMPTY_ROOT(&rb_dentry_root))
                 return 0;
 
-        rb_curr_counter = rb_first(&rb_dentry_root);
-        rb_next_counter = rb_next(rb_curr_counter);
-        for(; rb_curr_counter; ) {
-                curr = rb_entry(rb_curr_counter, struct dentry_counter, node);
-                rb_erase(rb_curr_counter, &rb_dentry_root);
+        rb_curr_p = rb_first(&rb_dentry_root);
+        rb_next_p = rb_next(rb_curr_p);
+        for(; rb_curr_p; ) {
+                curr = rb_entry(rb_curr_p, struct dentry_counter, node);
+                rb_erase(rb_curr_p, &rb_dentry_root);
                 kfree(curr);
 
-                if(!rb_next_counter)
+                if(!rb_next_p)
                         break;
-                rb_curr_counter = rb_next_counter;
-                rb_next_counter = rb_next(rb_curr_counter);
+                rb_curr_p = rb_next_p;
+                rb_next_p = rb_next(rb_curr_p);
         }
 
         return 0;

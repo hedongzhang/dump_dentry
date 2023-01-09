@@ -2,41 +2,51 @@
 dump denetry information
 
 ## Background
+...
 
 ## Documentation
 
-insmod and dump
+### insmod and dump
 ```shell
 insmod ./ddump.ko && rmmod ./ddump.ko
 ```
 
-output file is /tmp/dump_dentry.out
+output file is /tmp/dump_dentry.out :
 ```
->>> start analyze "/" dentry
-~/ Count: 1
-lib/ Count: 1
-bin/ Count: 1
-sbin/ Count: 1
-lib64/ Count: 1
-rpc/etc/ Count: 1
-lib/var/ Count: 1
-pki/etc/ Count: 4
-sda/mnt/ Count: 1
-etc/ssh/ Count: 7
-log/var/ Count: 10
-etc/rpm/ Count: 6
-lib/usr/ Count: 1158
-etc/gss/ Count: 2
-...
-redhat-release/etc/ Count: 1
-initrd-release/etc/ Count: 1
-anaconda-ks.cfg/root/ Count: 1
-dump_dentry.out/tmp/ Count: 1
-resolv.conf.save/etc/ Count: 1
-<<< end analyze "/" dentry: 28542917
+>>> Start analyze "/" dentry
+COUNT:1      /lib
+COUNT:244      /etc
+COUNT:1      /bin
+COUNT:530      /var
+COUNT:66      /tmp
+COUNT:58      /opt
+COUNT:19957      /usr
+COUNT:1      /sbin
+COUNT:1      /lib64
+COUNT:1      /dump
+COUNT:1      /test
+COUNT:465      /root
+COUNT:1      /META-INF
+COUNT:1      /selinux
+COUNT:1      /LogSetting.ini
+<<< End analyze "/" dentry: 21329
 ```
 
+### module parm desc
+>注意：dump_depth不易过大，否则会导出数据过多导致磁盘空间爆满
+```
+dump_depth:int          default: 1
+dump_directory:charp    default: "/"
+
+dump_match_on:int	default: 0
+dump_match_key:charp    default: "tmp"
+dump_match_max:int      default: 200000
+```
+
+
 ## Status
+...
+
 
 ## Building
 
@@ -44,10 +54,13 @@ resolv.conf.save/etc/ Count: 1
 make
 ```
 
+
 ## Communication channels
+...
 
 
 ## Contributing
+...
 
 
 ## Licensing

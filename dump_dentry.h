@@ -11,15 +11,15 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 
-#define DEF_DUMP_DEPTH 2
-#define DUMP_MATCH_MAX 200000
-#define DUMP_MATCH_KEY "tfa"
+#define DEF_DUMP_DEPTH 1
+
+#define DEF_DUMP_MATCH_MAX 200000
 
 struct super_block *get_superblock(const char *filename);
 
 size_t dump_dentry_path(struct dentry *dentry, char *buff, int buflen);
 
-int dump_dentry(const char *filename);
+int dump_specific_dentry(const char *filename, char* match);
 
 int analyze_dentry(const char *filename);
 

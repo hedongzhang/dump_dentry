@@ -6,7 +6,7 @@
 
 #include "output.h"
 
-void output(char *buff, int len, int new)
+int output(char *buff, int len, int new)
 {
         ssize_t ret;
         struct file *f;
@@ -18,15 +18,21 @@ void output(char *buff, int len, int new)
         else
                 f = filp_open(OUTPUT_FILE, O_WRONLY | O_APPEND, 0644);
         if (IS_ERR(f)) {
-                printk("create or open dump file error\n");
-                return;
+                printk("create or open dump file failed\n");
+                return -1;
         }
 
         fs = get_fs();
         set_fs(KERNEL_DS);
+
         ret = vfs_write(f, buff, len, &pos);
+        if(ret < 0) {
+                printk("output vfs_write failed\n");
+                return -1;
+        }
+
         filp_close(f, NULL);
         set_fs(fs);
 
-        return;
+        return 0;
 }
